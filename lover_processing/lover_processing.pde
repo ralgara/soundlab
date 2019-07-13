@@ -3,18 +3,23 @@ import javax.sound.midi.MidiMessage;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.SortedMap;
+import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.Iterator;
 import java.util.Arrays;
 
 MidiBus myBus; 
 final long genesis_ts = System.currentTimeMillis();
 // {note: {t: p}}
-final TreeMap<Integer, TreeMap<Long, Integer>> eventMap = new TreeMap();
+final ConcurrentSkipListMap<
+    Integer, 
+    ConcurrentSkipListMap<Long, Integer>
+  > eventMap = new ConcurrentSkipListMap();
+// {note: {t: {p, d} } }
+//...?
 
 final int MIDI_NOTE_MIN = 60; //21;
 final int MIDI_NOTE_MAX = 60; //108;
 final int TIME_WINDOW_SIZE = 10;
-final int BAR_HEIGHT = 2;
 boolean update = false;
 
 void setup() {
@@ -22,7 +27,7 @@ void setup() {
   int inDevice  = 0;
   int outDevice = 1;
   myBus = new MidiBus(this, inDevice, outDevice);
-  println("Frame rate: " + frameRate);
+  frameRate(10);
 
   size(480, 320);
   noStroke();
@@ -32,7 +37,7 @@ void setup() {
 
 void initData() {
   for (int note = MIDI_NOTE_MIN; note <= MIDI_NOTE_MAX; note++) {
-    eventMap.put(note, new TreeMap());
+    eventMap.put(note, new ConcurrentSkipListMap());
   }
 }
 
@@ -46,39 +51,52 @@ void draw() {
 
 void render() {
   long windowEndTs = getCurrentTimestamp();
-  long windowStartTs = windowEndTs - (TIME_WINDOW_SIZE * 1000);
+  println("--------");
   for (int note = MIDI_NOTE_MIN; note <= MIDI_NOTE_MAX; note++) {
-    TreeMap noteMap = eventMap.get(note);
-    SortedMap<Long, Integer> pressMap = noteMap.subMap(windowStartTs, windowEndTs);
-    println(note, windowStartTs, windowEndTs, "noteMap: " + noteMap, "pressMap: " + pressMap);
-    //if (noteMap.size() > 0) println(note, noteMap);
-    boolean ready = false;
+    println("note:", note);
+    ConcurrentSkipListMap noteMap = eventMap.get(note);
     long x0 = 0;
-    int y0 = note * BAR_HEIGHT;
-    int x1 = 0;
-    int currentFill = 0;
+    final float X_WIDTH_MSEC = 10000;
+    int y0 = (int) (
+      height *
+      (float)(note - MIDI_NOTE_MIN) / (MIDI_NOTE_MAX - MIDI_NOTE_MIN)
+    );
+    
     // Iterate over events for a single note
-    Iterator<Map.Entry<Long, Integer>> iterator = pressMap.entrySet().iterator();
+    Iterator<Map.Entry<Long, Integer>> iterator = noteMap.entrySet().iterator();
     while (iterator.hasNext()) {
       Map.Entry<Long, Integer> event = iterator.next();
       long ts = event.getKey();
       long pressure = event.getValue();
       if (pressure > 0) {
-        x0 = ts - windowStartTs;
-        currentFill = (int) pressure;
+        x0 = ts;
+        fill(pressure*2, 0, 0);
       } else {
         long barWidth = ts - x0;
-        fill(pressure, 0, 0);
-        rect(x0, y0, barWidth, BAR_HEIGHT);
-        println(String.format("x0:%d, y0:%d, w:%d, c:%d", x0, y0, barWidth, currentFill));
-      }
+        float xShift = (windowEndTs > X_WIDTH_MSEC) ? 
+          (windowEndTs - X_WIDTH_MSEC) :
+          0;
+/*
+wet:6931, sh:0.000000, x0:6483, y0:0, w:103
+wet:6931, sh:0.000000, x0:6788, y0:0, w:128
+*/
+        pushMatrix();
+        translate(xShift, 0);
+        float X_SCALE = (float) width / X_WIDTH_MSEC;
+        scale(X_SCALE, 1);
+        rect(x0, y0, barWidth, 10);
+        popMatrix();
         
+        println(String.format(
+          "wet:%d, sh:%f, x0:%d, y0:%d, w:%d", 
+          windowEndTs, xShift, x0, y0, barWidth));
+      }
     }
   }
 }
 
 void recordEvent(long ts, int note, int vel) {
-  TreeMap noteMap = eventMap.get(note);
+  ConcurrentSkipListMap noteMap = eventMap.get(note);
   noteMap.put(ts, vel);
 }
 
