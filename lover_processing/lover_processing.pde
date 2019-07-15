@@ -42,22 +42,25 @@ void initData() {
 }
 
 void draw() {
-  if (update) {
-    background(#000000);
-    render();
-    update = false;
-  }
+  background(#000000);
+  render();
 }
 
 void render() {
+  background(#000000);
   long windowEndTs = getCurrentTimestamp();
   println("--------");
+  long x0 = 0;
+  long y0 = 0;
+  long barWidth = 0;
+  float xlate = 0;
+  final float X_WIDTH_MSEC = 10000;
+  float X_SCALE = (float) width / X_WIDTH_MSEC;
   for (int note = MIDI_NOTE_MIN; note <= MIDI_NOTE_MAX; note++) {
     println("note:", note);
     ConcurrentSkipListMap noteMap = eventMap.get(note);
-    long x0 = 0;
-    final float X_WIDTH_MSEC = 10000;
-    int y0 = (int) (
+    x0 = 0;
+    y0 = (int) (
       height *
       (float)(note - MIDI_NOTE_MIN) / (MIDI_NOTE_MAX - MIDI_NOTE_MIN)
     );
@@ -72,27 +75,25 @@ void render() {
         x0 = ts;
         fill(pressure*2, 0, 0);
       } else {
-        long barWidth = ts - x0;
-        float xShift = (windowEndTs > X_WIDTH_MSEC) ? 
-          (windowEndTs - X_WIDTH_MSEC) :
-          0;
-/*
-wet:6931, sh:0.000000, x0:6483, y0:0, w:103
-wet:6931, sh:0.000000, x0:6788, y0:0, w:128
-*/
+        barWidth = ts - x0;
         pushMatrix();
-        translate(xShift, 0);
-        float X_SCALE = (float) width / X_WIDTH_MSEC;
         scale(X_SCALE, 1);
+        if (windowEndTs > X_WIDTH_MSEC) {
+          xlate = -(windowEndTs - X_WIDTH_MSEC);
+          translate(xlate, 0);
+        }
+        
         rect(x0, y0, barWidth, 10);
         popMatrix();
-        
-        println(String.format(
-          "wet:%d, sh:%f, x0:%d, y0:%d, w:%d", 
-          windowEndTs, xShift, x0, y0, barWidth));
       }
     }
   }
+  if (false) {
+    println(String.format(
+      "wet:%d, x0:%d, y0:%d, w:%d, sc:%.2f, xl:%.2f", 
+      windowEndTs, x0, y0, barWidth, X_SCALE, xlate));
+  }
+  update = false;
 }
 
 void recordEvent(long ts, int note, int vel) {
