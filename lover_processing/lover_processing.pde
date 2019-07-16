@@ -127,7 +127,8 @@ void render() {
   for (int note = MIDI_NOTE_MIN; note <= MIDI_NOTE_MAX; note++) {
     ConcurrentSkipListMap noteMap = eventMap.get(note);
     long x0 = 0;
-    long y0 = (int) (barHeight * (note - MIDI_NOTE_MIN) );
+    long y0 = SWGraphics.height - 
+      (int)(barHeight * (note - MIDI_NOTE_MIN));
     
     // Iterate over events for a single note
     Iterator<Map.Entry<Long, Integer>> iterator = noteMap.entrySet().iterator();
