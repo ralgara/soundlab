@@ -10,11 +10,15 @@ import java.util.Arrays;
 final float WEST_SECTOR_CUT = 0.6;
 final float NORTH_SECTOR_CUT = 0.3;
 
-float WEST_SECTOR_WIDTH;
-float EAST_SECTOR_WIDTH;
-float NORTH_SECTOR_HEIGHT;
-float SOUTH_SECTOR_HEIGHT;
+int WEST_SECTOR_WIDTH;
+int EAST_SECTOR_WIDTH;
+int NORTH_SECTOR_HEIGHT;
+int SOUTH_SECTOR_HEIGHT;
 
+PGraphics NWGraphics;
+PGraphics NEGraphics;
+PGraphics SWGraphics;
+PGraphics SEGraphics;
 
 MidiBus myBus; 
 final long genesis_ts = System.currentTimeMillis();
@@ -28,14 +32,20 @@ final ConcurrentSkipListMap<
 final int MIDI_NOTE_MIN = 0;
 final int MIDI_NOTE_MAX = 120;
 final int TIME_WINDOW_SIZE = 10;
+final String RENDERER = P2D;
 boolean update = false;
 
 void setup() {
-  size(800, 600);
-  WEST_SECTOR_WIDTH = width * WEST_SECTOR_CUT;
+  size(800, 600, RENDERER);
+  WEST_SECTOR_WIDTH = (int)(width * WEST_SECTOR_CUT);
   EAST_SECTOR_WIDTH = width - WEST_SECTOR_WIDTH;
-  NORTH_SECTOR_HEIGHT = height * NORTH_SECTOR_CUT;
+  NORTH_SECTOR_HEIGHT = (int)(height * NORTH_SECTOR_CUT);
   SOUTH_SECTOR_HEIGHT = height - NORTH_SECTOR_HEIGHT;
+  
+  NWGraphics = createGraphics(WEST_SECTOR_WIDTH, NORTH_SECTOR_HEIGHT, RENDERER);
+  NEGraphics = createGraphics(EAST_SECTOR_WIDTH, NORTH_SECTOR_HEIGHT, RENDERER);
+  SWGraphics = createGraphics(WEST_SECTOR_WIDTH, SOUTH_SECTOR_HEIGHT, RENDERER);
+  SEGraphics = createGraphics(EAST_SECTOR_WIDTH, SOUTH_SECTOR_HEIGHT, RENDERER);
   
   MidiBus.list();
   int inDevice  = 0;
@@ -58,7 +68,6 @@ void initData() {
 void grid() {
   stroke(#ffffff);
   fill(#000000);
-  rect(0,0,width,height);
   line(WEST_SECTOR_WIDTH, 0, WEST_SECTOR_WIDTH, height); // |
   line(0, NORTH_SECTOR_HEIGHT, width, NORTH_SECTOR_HEIGHT); // ---
 }
@@ -69,11 +78,15 @@ void draw() {
 }
 
 void render() {
-  noStroke();
+  SWGraphics.beginDraw();
+  SWGraphics.noStroke();
+  // Hue: pressure (MIDI, 0:127), Saturation 0:1, Brightness 0:1
+  SWGraphics.colorMode(HSB, 127, 1, 1);
+  SWGraphics.background(0);
   long windowEndTs = getCurrentTimestamp();
   final float X_WIDTH_MSEC = 10000;
-  float X_SCALE = (float) width / X_WIDTH_MSEC;
-  float barHeight = height / (float)(MIDI_NOTE_MAX - MIDI_NOTE_MIN);
+  float X_SCALE = (float) SWGraphics.width / X_WIDTH_MSEC;
+  float barHeight = SWGraphics.height / (float)(MIDI_NOTE_MAX - MIDI_NOTE_MIN);
   for (int note = MIDI_NOTE_MIN; note <= MIDI_NOTE_MAX; note++) {
     ConcurrentSkipListMap noteMap = eventMap.get(note);
     long x0 = 0;
@@ -88,20 +101,22 @@ void render() {
       long pressure = event.getValue();
       if (pressure > 0) {
         x0 = ts;
-        fill(pressure, 1, 127);
+        SWGraphics.fill(pressure, 1, 1);
       } else {
         barWidth = ts - x0;
-        pushMatrix();
-        scale(X_SCALE, 1);
+        SWGraphics.pushMatrix();
+        SWGraphics.scale(X_SCALE, 1);
         if (windowEndTs > X_WIDTH_MSEC) {
           float xlate = -(windowEndTs - X_WIDTH_MSEC);
-          translate(xlate, 0);
+          SWGraphics.translate(xlate, 0);
         }
-        rect(x0, y0, barWidth, barHeight);
-        popMatrix();
+        SWGraphics.rect(x0, y0, barWidth, barHeight);
+        SWGraphics.popMatrix();
       }
     }
   }
+  SWGraphics.endDraw();
+  image(SWGraphics, 0, NORTH_SECTOR_HEIGHT);
   update = false;
 }
 
