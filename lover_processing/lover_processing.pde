@@ -1,5 +1,6 @@
 import themidibus.*;
 import javax.sound.midi.MidiMessage;
+import java.lang.Math;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.SortedMap;
@@ -52,10 +53,7 @@ void setup() {
   int outDevice = 1;
   myBus = new MidiBus(this, inDevice, outDevice);
   frameRate(10);
-
-  colorMode(HSB, 127, 1, 127);
   noStroke();
-  
   initData();
 }
 
@@ -77,11 +75,16 @@ void draw() {
   render();
 }
 
+int MIDI_PRESSURE_MAX = 127;
+int scalePressure(int pressure) {
+  return (int) Math.round(Math.sqrt(pressure * MIDI_PRESSURE_MAX));
+}
+
 void render() {
   SWGraphics.beginDraw();
   SWGraphics.noStroke();
   // Hue: pressure (MIDI, 0:127), Saturation 0:1, Brightness 0:1
-  SWGraphics.colorMode(HSB, 127, 1, 1);
+  SWGraphics.colorMode(HSB, MIDI_PRESSURE_MAX, 1, MIDI_PRESSURE_MAX);
   SWGraphics.background(0);
   long windowEndTs = getCurrentTimestamp();
   final float X_WIDTH_MSEC = 10000;
@@ -98,10 +101,11 @@ void render() {
       long barWidth = 0;
       Map.Entry<Long, Integer> event = iterator.next();
       long ts = event.getKey();
-      long pressure = event.getValue();
+      int pressure = event.getValue();
       if (pressure > 0) {
         x0 = ts;
-        SWGraphics.fill(pressure, 1, 1);
+        int scaledPressure = scalePressure(pressure);
+        SWGraphics.fill(scaledPressure, 1, scaledPressure);
       } else {
         barWidth = ts - x0;
         SWGraphics.pushMatrix();
