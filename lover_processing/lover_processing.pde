@@ -15,10 +15,9 @@ final ConcurrentSkipListMap<
     ConcurrentSkipListMap<Long, Integer>
   > eventMap = new ConcurrentSkipListMap();
 // {note: {t: {p, d} } }
-//...?
 
-final int MIDI_NOTE_MIN = 21;
-final int MIDI_NOTE_MAX = 108;
+final int MIDI_NOTE_MIN = 0;
+final int MIDI_NOTE_MAX = 120;
 final int TIME_WINDOW_SIZE = 10;
 boolean update = false;
 
