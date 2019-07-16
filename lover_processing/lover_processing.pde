@@ -28,7 +28,7 @@ void setup() {
   myBus = new MidiBus(this, inDevice, outDevice);
   frameRate(10);
 
-  size(480, 320);
+  size(800, 500);
   colorMode(HSB, 127, 1, 127);
   noStroke();
   
