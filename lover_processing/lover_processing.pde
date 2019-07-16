@@ -16,6 +16,8 @@ int EAST_SECTOR_WIDTH;
 int NORTH_SECTOR_HEIGHT;
 int SOUTH_SECTOR_HEIGHT;
 
+final float X_WIDTH_MSEC = 10000;
+
 PGraphics NWGraphics;
 PGraphics NEGraphics;
 PGraphics SWGraphics;
@@ -23,12 +25,14 @@ PGraphics SEGraphics;
 
 MidiBus myBus; 
 final long genesis_ts = System.currentTimeMillis();
-// {note: {t: p}}
 final ConcurrentSkipListMap<
-    Integer, 
-    ConcurrentSkipListMap<Long, Integer>
+    Integer,  // note
+    ConcurrentSkipListMap<
+      Long,   // pressure
+      Integer // duration
+    >
   > eventMap = new ConcurrentSkipListMap();
-// {note: {t: {p, d} } }
+
 
 final int MIDI_NOTE_MIN = 0;
 final int MIDI_NOTE_MAX = 120;
@@ -43,10 +47,10 @@ void setup() {
   NORTH_SECTOR_HEIGHT = (int)(height * NORTH_SECTOR_CUT);
   SOUTH_SECTOR_HEIGHT = height - NORTH_SECTOR_HEIGHT;
   
-  NWGraphics = createGraphics(WEST_SECTOR_WIDTH, NORTH_SECTOR_HEIGHT, RENDERER);
-  NEGraphics = createGraphics(EAST_SECTOR_WIDTH, NORTH_SECTOR_HEIGHT, RENDERER);
-  SWGraphics = createGraphics(WEST_SECTOR_WIDTH, SOUTH_SECTOR_HEIGHT, RENDERER);
-  SEGraphics = createGraphics(EAST_SECTOR_WIDTH, SOUTH_SECTOR_HEIGHT, RENDERER);
+  NWGraphics = createGraphics(WEST_SECTOR_WIDTH - 1, NORTH_SECTOR_HEIGHT - 1, RENDERER);
+  NEGraphics = createGraphics(EAST_SECTOR_WIDTH - 1, NORTH_SECTOR_HEIGHT - 1, RENDERER);
+  SWGraphics = createGraphics(WEST_SECTOR_WIDTH - 1, SOUTH_SECTOR_HEIGHT - 1, RENDERER);
+  SEGraphics = createGraphics(EAST_SECTOR_WIDTH - 1, SOUTH_SECTOR_HEIGHT - 1, RENDERER);
   
   MidiBus.list();
   int inDevice  = 0;
@@ -80,14 +84,44 @@ int scalePressure(int pressure) {
   return (int) Math.round(Math.sqrt(pressure * MIDI_PRESSURE_MAX));
 }
 
+float getAvgPressure() {
+  int acc = 0;
+  int count = 0;
+  long timeLowerBound = getCurrentTimestamp() - (int)X_WIDTH_MSEC;
+  for (Map.Entry<Integer, ConcurrentSkipListMap<Long, Integer>> noteMapEntry : eventMap.entrySet()) {
+    Map<Long, Integer> eventSubmap = noteMapEntry.getValue().tailMap(timeLowerBound);
+    for (Map.Entry<Long, Integer> eventEntry : eventSubmap.entrySet()) {
+      int velocity = eventEntry.getValue();
+      if (velocity > 0) {
+        count++;
+        acc += velocity;
+      }
+    }
+  }
+  return ((float) acc)/count;
+}
+
+void renderNorthWest() {
+  float avgPressure = getAvgPressure();
+  NWGraphics.beginDraw();
+  NWGraphics.noStroke();
+  NWGraphics.colorMode(RGB);
+  NWGraphics.background(0);
+  NWGraphics.textSize(30);
+  NWGraphics.fill(#0080c0);
+  NWGraphics.text(avgPressure, 10, 35);
+  NWGraphics.endDraw();
+  image(NWGraphics, 0, 0);
+}
+
 void render() {
+  renderNorthWest();
   SWGraphics.beginDraw();
   SWGraphics.noStroke();
   // Hue: pressure (MIDI, 0:127), Saturation 0:1, Brightness 0:1
   SWGraphics.colorMode(HSB, MIDI_PRESSURE_MAX, 1, MIDI_PRESSURE_MAX);
   SWGraphics.background(0);
   long windowEndTs = getCurrentTimestamp();
-  final float X_WIDTH_MSEC = 10000;
   float X_SCALE = (float) SWGraphics.width / X_WIDTH_MSEC;
   float barHeight = SWGraphics.height / (float)(MIDI_NOTE_MAX - MIDI_NOTE_MIN);
   for (int note = MIDI_NOTE_MIN; note <= MIDI_NOTE_MAX; note++) {
