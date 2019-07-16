@@ -15,12 +15,12 @@ inPorts.do({ arg i;
 	MIDIIn.connect(i, MIDIClient.sources.at(i));
 });
 var velocity = 20;
-var channel = 2;
+var channel = 1;
 var note = 33;
 m = MIDIOut(channel);
 m.noteOn(channel, note, velocity);
-m.allNotesOff(16);
 m.allNotesOff(channel);
+
 
 m.noteOn(16, 60, velocity);
 m.noteOn(16, 61, velocity);

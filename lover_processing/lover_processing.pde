@@ -51,13 +51,11 @@ void render() {
   long windowEndTs = getCurrentTimestamp();
   final float X_WIDTH_MSEC = 10000;
   float X_SCALE = (float) width / X_WIDTH_MSEC;
+  float barHeight = height / (float)(MIDI_NOTE_MAX - MIDI_NOTE_MIN);
   for (int note = MIDI_NOTE_MIN; note <= MIDI_NOTE_MAX; note++) {
     ConcurrentSkipListMap noteMap = eventMap.get(note);
     long x0 = 0;
-    long y0 = (int) (
-      height *
-      (float)(note - MIDI_NOTE_MIN) / (MIDI_NOTE_MAX - MIDI_NOTE_MIN)
-    );
+    long y0 = (int) (barHeight * (note - MIDI_NOTE_MIN) );
     
     // Iterate over events for a single note
     Iterator<Map.Entry<Long, Integer>> iterator = noteMap.entrySet().iterator();
@@ -77,8 +75,7 @@ void render() {
           float xlate = -(windowEndTs - X_WIDTH_MSEC);
           translate(xlate, 0);
         }
-        
-        rect(x0, y0, barWidth, 10);
+        rect(x0, y0, barWidth, barHeight);
         popMatrix();
       }
     }
@@ -96,7 +93,8 @@ long getCurrentTimestamp() {
 }
 
 void midiMessage(MidiMessage message, long tick, String bus_name) { 
-  int note = (int)(message.getMessage()[1] & 0xFF) ;
+  int note = (int)(message.getMessage()[1] & 0xFF);
+  println(note);
   int vel = (int)(message.getMessage()[2] & 0xFF);
   long ts = getCurrentTimestamp();
   recordEvent(ts, note, vel);
