@@ -28,7 +28,7 @@ final long genesis_ts = System.currentTimeMillis();
 final ConcurrentSkipListMap<
     Integer,  // note
     ConcurrentSkipListMap<
-      Long,   // pressure
+      Long,   // velocity
       Integer // duration
     >
   > eventMap = new ConcurrentSkipListMap();
@@ -79,12 +79,12 @@ void draw() {
   render();
 }
 
-int MIDI_PRESSURE_MAX = 127;
-int scalePressure(int pressure) {
-  return (int) Math.round(Math.sqrt(pressure * MIDI_PRESSURE_MAX));
+int MIDI_VELOCITY_MAX = 127;
+int scaleVelocity(int velocity) {
+  return (int) Math.round(Math.sqrt(velocity * MIDI_VELOCITY_MAX));
 }
 
-float getAvgPressure() {
+float getAvgVelocity() {
   int acc = 0;
   int count = 0;
   long timeLowerBound = getCurrentTimestamp() - (int)X_WIDTH_MSEC;
@@ -102,14 +102,14 @@ float getAvgPressure() {
 }
 
 void renderNorthWest() {
-  float avgPressure = getAvgPressure();
+  float avgVelocity = getAvgVelocity();
   NWGraphics.beginDraw();
   NWGraphics.noStroke();
   NWGraphics.colorMode(RGB);
   NWGraphics.background(0);
   NWGraphics.textSize(30);
   NWGraphics.fill(#0080c0);
-  NWGraphics.text(avgPressure, 10, 35);
+  NWGraphics.text(avgVelocity, 10, 35);
   NWGraphics.endDraw();
   image(NWGraphics, 0, 0);
 }
@@ -118,8 +118,8 @@ void render() {
   renderNorthWest();
   SWGraphics.beginDraw();
   SWGraphics.noStroke();
-  // Hue: pressure (MIDI, 0:127), Saturation 0:1, Brightness 0:1
-  SWGraphics.colorMode(HSB, MIDI_PRESSURE_MAX, 1, MIDI_PRESSURE_MAX);
+  // Hue: velocity (MIDI, 0:127), Saturation 0:1, Brightness 0:1
+  SWGraphics.colorMode(HSB, MIDI_VELOCITY_MAX, 1, 1);
   SWGraphics.background(0);
   long windowEndTs = getCurrentTimestamp();
   float X_SCALE = (float) SWGraphics.width / X_WIDTH_MSEC;
@@ -136,11 +136,11 @@ void render() {
       long barWidth = 0;
       Map.Entry<Long, Integer> event = iterator.next();
       long ts = event.getKey();
-      int pressure = event.getValue();
-      if (pressure > 0) {
+      int velocity = event.getValue();
+      if (velocity > 0) {
         x0 = ts;
-        int scaledPressure = scalePressure(pressure);
-        SWGraphics.fill(scaledPressure, 1, scaledPressure);
+        int scaledVelocity = scaleVelocity(velocity);
+        SWGraphics.fill(scaledVelocity, 1, 1);
       } else {
         barWidth = ts - x0;
         SWGraphics.pushMatrix();
