@@ -162,10 +162,43 @@ void render() {
 void recordEvent(long ts, int note, int vel) {
   ConcurrentSkipListMap noteMap = eventMap.get(note);
   noteMap.put(ts, vel);
+  Stats.recordVelocity(ts, vel);
 }
 
 long getCurrentTimestamp() {
   return System.currentTimeMillis() - genesis_ts;
+}
+
+static class Stats {
+  static long eventCount = 0;
+  static long velocitySum = 0;
+  static long durationSum = 0;
+  static final short IDX_COUNT = 0;
+  static final short IDX_VELOCITY = 1;
+  static final short IDX_DURARTION = 2;
+  
+  static final ConcurrentSkipListMap<
+    Long,   // timestamp
+    long[] // count, velocity, duration
+  > statsMap = new ConcurrentSkipListMap();
+  
+  static void recordVelocity(long timestamp, int velocity) {
+    if (velocity == 0) 
+      return;
+    long[] statsEntry;
+    if (statsMap.containsKey(timestamp)) {
+      statsEntry = statsMap.get(timestamp);
+    } else {
+      statsEntry = new long[3];
+    }
+    eventCount++;
+    velocitySum += velocity;
+    statsEntry[IDX_COUNT] = eventCount;
+    statsEntry[IDX_VELOCITY] = velocitySum;
+    println(timestamp + ":" + (velocitySum/eventCount));
+    statsMap.put(timestamp, statsEntry);
+  }
+  
 }
 
 void midiMessage(MidiMessage message, long tick, String bus_name) { 
