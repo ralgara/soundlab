@@ -28,8 +28,8 @@ final long genesis_ts = System.currentTimeMillis();
 final ConcurrentSkipListMap<
     Integer,  // note
     ConcurrentSkipListMap<
-      Long,   // velocity
-      Integer // duration
+      Long,   // timestamp
+      Integer // velocity
     >
   > eventMap = new ConcurrentSkipListMap();
 
