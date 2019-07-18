@@ -2,6 +2,7 @@ import themidibus.*;
 import javax.sound.midi.MidiMessage;
 import java.lang.Math;
 import java.util.Map;
+import java.util.Random;
 import java.util.TreeMap;
 import java.util.SortedMap;
 import java.util.concurrent.ConcurrentSkipListMap;
@@ -38,6 +39,7 @@ final int MIDI_NOTE_MIN = 0;
 final int MIDI_NOTE_MAX = 120;
 final int TIME_WINDOW_SIZE = 10;
 final String RENDERER = P2D;
+final boolean MOCK_MIDI = true;
 boolean update = false;
 
 void setup() {
@@ -52,13 +54,18 @@ void setup() {
   SWGraphics = createGraphics(WEST_SECTOR_WIDTH - 1, SOUTH_SECTOR_HEIGHT - 1, RENDERER);
   SEGraphics = createGraphics(EAST_SECTOR_WIDTH - 1, SOUTH_SECTOR_HEIGHT - 1, RENDERER);
   
-  MidiBus.list();
-  int inDevice  = 0;
-  int outDevice = 1;
-  myBus = new MidiBus(this, inDevice, outDevice);
   frameRate(10);
   noStroke();
   initData();
+  
+  if (MOCK_MIDI) {
+    thread("mockMIDI");
+  } else {
+    MidiBus.list();
+    int inDevice  = 0;
+    int outDevice = 1;
+    myBus = new MidiBus(this, inDevice, outDevice);
+  }
 }
 
 void initData() {
@@ -100,7 +107,7 @@ float getAvgVelocity() {
   }
   return ((float) acc)/count;
 }
-
+  
 void renderNorthWest() {
   float avgVelocity = getAvgVelocity();
   NWGraphics.beginDraw();
@@ -160,6 +167,7 @@ void render() {
 }
 
 void recordEvent(long ts, int note, int vel) {
+  println(ts + " " + note + " " + vel);
   ConcurrentSkipListMap noteMap = eventMap.get(note);
   noteMap.put(ts, vel);
   Stats.recordVelocity(ts, vel);
@@ -198,7 +206,45 @@ static class Stats {
     println(timestamp + ":" + (velocitySum/eventCount));
     statsMap.put(timestamp, statsEntry);
   }
+}
+
+// Bounded brownian generator
+class Generator {
+  int min, max;
+  int value;
+  Random random = new Random();
   
+  Generator(int min, int max) {
+    this.min = min;
+    this.max = max;
+  }
+  
+  int getNextValue() {
+    int RANGE = 10;
+    int sign = random.nextFloat() > 0.5 ? 1 : -1;
+    int skip = random.nextInt(RANGE) * sign;
+    int nextValue = value + skip;
+    if (nextValue > this.max || nextValue < this.min) {
+      nextValue = value - skip;
+    }
+    value = nextValue;
+    return value;
+  }
+}
+
+void mockMIDI() {
+  Generator noteGenerator = new Generator(20,100);
+  Generator velocityGenerator = new Generator(10,127);
+  for (int i=0; i<60; i++) {
+    int note = noteGenerator.getNextValue();
+    int velocity = velocityGenerator.getNextValue();
+    recordEvent(getCurrentTimestamp(), note, velocity);
+    delay(300);
+    recordEvent(getCurrentTimestamp(), note, 0);
+    update = true;
+    
+
+  }
 }
 
 void midiMessage(MidiMessage message, long tick, String bus_name) { 
