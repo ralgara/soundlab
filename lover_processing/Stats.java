@@ -26,11 +26,11 @@ public class Stats {
   public Stats() {
   }
   
-  public static void recordEvent(long ts, int note, int vel) {
-    System.out.println(ts + " " + note + " " + vel);
-    ConcurrentSkipListMap noteMap = eventMap.get(note);
-    noteMap.put(ts, vel);
-    Stats.recordVelocity(ts, vel);
+  public static void recordEvent(Event event) {
+    System.out.println(event.timestamp + " " + event.note + " " + event.timestamp);
+    ConcurrentSkipListMap noteMap = eventMap.get(event.note);
+    noteMap.put(event.timestamp, event.timestamp);
+    Stats.recordVelocity(event.timestamp, event.timestamp);
   }
   
   static float getAvgVelocity() {

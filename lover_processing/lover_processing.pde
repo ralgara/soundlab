@@ -138,20 +138,26 @@ void renderNorthWest() {
 //  update = false;
 //}
 
-//void mockMIDI() {
-//  Generator noteGenerator = new Generator(20,100);
-//  Generator velocityGenerator = new Generator(10,127);
-//  while(true) {
-//    int note = noteGenerator.getNextValue();
-//    int velocity = velocityGenerator.getNextValue();
-//    recordEvent(getCurrentTimestamp(), note, velocity);
-//    delay(300);
-//    recordEvent(getCurrentTimestamp(), note, 0);
-//    update = true;
-//  }
-//}
+void mockMIDI() {
+  EventGenerator.getEventStream()
+    .limit(10)
+    .forEach((event) -> {
+        Stats.recordEvent(event);
+        delay(300);
+        return event;
+    }).flatMap((event) -> {
+      Event up = new Event(event);
+      up.velocity = 0;
+      return Stream.concat(
+        Stream.of(event),
+        Stream.of(up)
+      );
+    }
+    
+    update = true;
+  }
+}
 
-// MIDI event callback
 void midiMessage(MidiMessage message, long tick, String bus_name) { 
   int note = (int)(message.getMessage()[1] & 0xFF);
   int vel = (int)(message.getMessage()[2] & 0xFF);
