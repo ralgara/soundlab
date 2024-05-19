@@ -1,51 +1,64 @@
 #!/usr/bin/env python3
 
 import mido
-from mido import MidiFile, MidiTrack, Message
 
-def create_midi_file(chord_progression, melody_notes, output_file):
-    mid = MidiFile()
-    chord_track = MidiTrack()
-    melody_track = MidiTrack()
-    mid.tracks.append(chord_track)
-    mid.tracks.append(melody_track)
+required_version = "1.2.9"
+installed_version = mido.__version__
 
-    # Set the tempo of the MIDI file (optional)
-    bpm = 120
-    chord_track.append(Message('set_tempo', tempo=mido.bpm2tempo(bpm)))
-    melody_track.append(Message('set_tempo', tempo=mido.bpm2tempo(bpm)))
+if required_version != installed_version:
+    print(f"Error: Required version of mido is {required_version}, but installed version is {installed_version}.")
+    print("Please install the correct version before running this code.")
+    exit()
 
-    # Set the time signature of the MIDI file (optional)
-    numerator = 4
-    denominator = 4
-    clocks_per_click = 24
-    notated_32nd_notes_per_beat = 8
-    time_signature = (numerator, denominator, clocks_per_click, notated_32nd_notes_per_beat)
-    chord_track.append(Message('time_signature', numerator=numerator, denominator=denominator,
-                               clocks_per_click=clocks_per_click, notated_32nd_notes_per_beat=notated_32nd_notes_per_beat))
-    melody_track.append(Message('time_signature', numerator=numerator, denominator=denominator,
-                                clocks_per_click=clocks_per_click, notated_32nd_notes_per_beat=notated_32nd_notes_per_beat))
+# Continue with the rest of the code
 
-    # Convert each chord in the progression to MIDI notes and add them to the chord track
-    for chord in chord_progression:
-        for note in chord:
-            chord_track.append(Message('note_on', note=note, velocity=64, time=0))
-        for note in chord:
-            chord_track.append(Message('note_off', note=note, velocity=64, time=480))  # Adjust the time value as needed
-
-    # Add melody notes with syncopated rhythm to the melody track
-    time = 0
-    for note in melody_notes:
-        melody_track.append(Message('note_on', note=note, velocity=80, time=time))
-        melody_track.append(Message('note_off', note=note, velocity=80, time=240))  # Adjust the time value as needed
-        time += 240  # Increase the time value to create syncopation
-
-    # Save the MIDI file
-    mid.save(output_file)
-
-# Example usage
+# Define the chord progression and melody notes
 chord_progression = [['C4', 'E4', 'G4'], ['G4', 'B4', 'D5'], ['A4', 'C5', 'E5'], ['F4', 'A4', 'C5']]
 melody_notes = ['C5', 'D5', 'E5', 'G5', 'E5', 'D5', 'C5']
-output_file = 'output.mid'
 
-create_midi_file(chord_progression, melody_notes, output_file)
+# Set the time signature and tempo
+time_signature = 4  # 4/4 time signature
+tempo = 120  # Beats per minute
+
+# Create a note name to note number lookup dictionary
+note_lookup = {
+    'C': 60, 'C#': 61, 'Db': 61, 'D': 62, 'D#': 63, 'Eb': 63, 'E': 64, 'F': 65, 'F#': 66, 'Gb': 66,
+    'G': 67, 'G#': 68, 'Ab': 68, 'A': 69, 'A#': 70, 'Bb': 70, 'B': 71
+}
+
+# Create a new MIDI file
+midi = mido.MidiFile()
+
+# Create a track for the chord progression
+chord_track = mido.MidiTrack()
+midi.tracks.append(chord_track)
+
+# Add the chord progression to the track
+ticks_per_beat = midi.ticks_per_beat
+quarter_note_duration = ticks_per_beat * 60 / tempo
+for i, chord in enumerate(chord_progression):
+    for note in chord:
+        note_name, octave = note[:-1], int(note[-1])
+        note_number = note_lookup[note_name] + (octave + 1) * 12
+        chord_track.append(mido.Message('note_on', note=note_number, velocity=64, time=int(i * quarter_note_duration)))
+    for note in chord:
+        note_name, octave = note[:-1], int(note[-1])
+        note_number = note_lookup[note_name] + (octave + 1) * 12
+        chord_track.append(mido.Message('note_off', note=note_number, velocity=64, time=int(quarter_note_duration)))
+
+# Create a track for the melody notes
+melody_track = mido.MidiTrack()
+midi.tracks.append(melody_track)
+
+# Add the melody notes to the track
+for i, note in enumerate(melody_notes):
+    note_name, octave = note[:-1], int(note[-1])
+    note_number = note_lookup[note_name] + (octave + 1) * 12
+    melody_track.append(mido.Message('note_on', note=note_number, velocity=64, time=int(i * quarter_note_duration)))
+    melody_track.append(mido.Message('note_off', note=note_number, velocity=64, time=int(quarter_note_duration)))
+
+# Write the MIDI file to disk
+output_file = 'output.mid'
+midi.save(output_file)
+
+print(f"MIDI file '{output_file}' created successfully!")

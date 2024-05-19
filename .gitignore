@@ -1,2 +1,4 @@
 llm-composer/bin/**
 llm-composer/lib/**
+llm-composer/share/**
+.DS_Store
